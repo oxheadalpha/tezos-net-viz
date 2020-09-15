@@ -16,4 +16,5 @@ optional arguments:
 ```
 
 Example graph in a 5-node private chain:
+
 ![Example graph](graph.gv.svg)
