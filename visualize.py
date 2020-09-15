@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import Any, AsyncIterator
-from dataclasses import dataclass
 import aiohttp
 import asyncio
 import argparse
@@ -10,12 +9,6 @@ import graphviz
 RPC_ENDPOINT = "http://{endpoint}:8732/network/connections/"
 
 Address = str
-
-
-@dataclass
-class Edge:
-    node_one: Address
-    node_two: Address
 
 
 async def fetch(
@@ -27,9 +20,14 @@ async def fetch(
             yield item
 
 
-async def get_neighbours(
-    session: aiohttp.ClientSession, endpoint: Address
-) -> AsyncIterator[Edge]:
+async def traverse_node(
+    loop: asyncio.AbstractEventLoop,
+    session: aiohttp.ClientSession,
+    visited: set[Address],
+    graph: graphviz.Digraph,
+    endpoint: Address,
+) -> None:
+    visited.add(endpoint)
     print(f"Getting neighbours of {endpoint}...")
     node_rpc = RPC_ENDPOINT.format(endpoint=endpoint)
     try:
@@ -39,31 +37,15 @@ async def get_neighbours(
             if addr.startswith("::ffff:"):  # remove ipv6
                 addr = addr[7:]  # TODO: replace with <str>.removeprefix in python 3.9
             if neighbour["incoming"]:
-                yield Edge(addr, endpoint)
+                print(f"Added edge {addr} {endpoint}")
+                graph.edge(addr, endpoint)
             else:
-                yield Edge(endpoint, addr)
+                print(f"Added edge {endpoint} {addr}")
+                graph.edge(endpoint, addr)
+            if addr not in visited:
+                loop.create_task(traverse_node(loop, session, visited, graph, addr))
     except asyncio.TimeoutError:
         print(f"Connection timed out. Node unreachable.")
-
-
-async def make_graph(starting_endpoint: Address, timeout: int) -> None:
-    g = graphviz.Digraph("G", filename="graph.gv", format="svg", strict=True)
-    visited: set[Address] = set()
-    queue = asyncio.Queue()
-    timeout_config = aiohttp.ClientTimeout(total=timeout)
-    async with aiohttp.ClientSession(timeout=timeout_config) as session:
-        visited.add(starting_endpoint)
-        await queue.put(get_neighbours(session, starting_endpoint))
-        while not queue.empty():
-            top = await queue.get()
-            async for edge in top:
-                g.edge(edge.node_one, edge.node_two)
-                for node in edge.__dict__.values():
-                    if node not in visited:
-                        visited.add(node)
-                        await queue.put(get_neighbours(session, node))
-            queue.task_done()
-    g.render()
 
 
 def main() -> None:
@@ -80,7 +62,22 @@ def main() -> None:
         type=int,
     )
     args = parser.parse_args()
-    asyncio.run(make_graph(args.endpoint, args.timeout))
+
+    g = graphviz.Digraph("G", filename="graph.gv", format="svg", strict=True)
+    timeout_config = aiohttp.ClientTimeout(total=args.timeout)
+    session = aiohttp.ClientSession(timeout=timeout_config)
+    visited: set[Address] = set()
+
+    loop = asyncio.get_event_loop()
+    loop.create_task(traverse_node(loop, session, visited, g, args.endpoint))
+    while pending := [task for task in asyncio.all_tasks(loop) if not task.done()]:
+        loop.run_until_complete(asyncio.gather(*pending))
+    loop.run_until_complete(session.close())
+
+    g.render()
+    print(
+        f"Done traversal. Traversed through {len(visited)} nodes, with {len(g.body)} edges"
+    )
 
 
 if __name__ == "__main__":
