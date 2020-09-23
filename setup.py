@@ -5,7 +5,7 @@ with open("README.md", "r") as readme:
 
 setuptools.setup(
     name="tezos_net_viz",
-    version="0.0.1a",
+    version="0.0.2a",
     author="Simon Zeng",
     author_email="simon.zeng@tqtezos.com",
     description="Tezos blockchain visualization tool",

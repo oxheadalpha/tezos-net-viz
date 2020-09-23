@@ -74,13 +74,14 @@ async def fetch(session: aiohttp.ClientSession, url: Address) -> AsyncIterator[J
 class NodeTraverser:
     def __init__(
         self,
-        loop: asyncio.AbstractEventLoop,
-        graph: pygraphviz.AGraph,
-        color_map: dict[Hash, Color],
-        visited: set[Address],
         refresh_interval: int,
         rpc_port: int,
         timeout: int,
+        run_once: bool = False,
+        loop: asyncio.AbstractEventLoop = asyncio.get_event_loop(),
+        graph: pygraphviz.AGraph = pygraphviz.AGraph(directed=True, strict=True),
+        color_map: dict[Hash, Color] = IncrementingDefaultDict(COLORS),
+        visited: set[Address] = set(),
     ) -> None:
         self.loop = loop
         self.graph = graph
@@ -89,15 +90,31 @@ class NodeTraverser:
         self.refresh_interval = refresh_interval
         self.rpc_port = rpc_port
         self.timeout = timeout
+        self.run_once = run_once
         self.session: Optional[aiohttp.ClientSession] = None
-        self.interrupted = False
 
-    def interrupt(self) -> None:
-        self.interrupted = True
+    def start(self, endpoint: Address) -> None:
+        self.loop.create_task(self.start_traverse(endpoint))
 
-    async def close(self) -> None:
-        if self.session:
-            await self.session.close()
+        try:
+            if self.run_once:
+                self.finalize_tasks()
+            else:
+                self.loop.run_forever()
+        except KeyboardInterrupt:
+            print("Caught keyboard interrupt, finalizing graph...")
+            self.run_once = True
+            self.loop.create_task(self.restart_traversal(endpoint))
+            self.finalize_tasks()
+        finally:
+            self.loop.close()
+
+    def finalize_tasks(self) -> None:
+        while pending := [
+            task for task in asyncio.all_tasks(self.loop) if not task.done()
+        ]:
+            self.loop.run_until_complete(asyncio.gather(*pending))
+        self.loop.run_until_complete(self.session.close())
         self.graph.draw("graph.svg", prog="dot")
 
     async def restart_traversal(self, starting_addr: Address) -> None:
@@ -105,7 +122,7 @@ class NodeTraverser:
         print("Updating graph state...")
         self.visited = set()
         self.loop.create_task(self.traverse_node(starting_addr))
-        if not self.interrupted:
+        if not self.run_once:
             await asyncio.sleep(self.refresh_interval)
             self.loop.create_task(self.restart_traversal(starting_addr))
 
@@ -142,6 +159,8 @@ class NodeTraverser:
 
             # set color based off of head hash
             node_obj = self.graph.get_node(node_addr)
+            node_obj.attr["shape"] = "record"
+            node_obj.attr["label"] = f"{node_addr}|{head_hash}"
             node_obj.attr["color"] = self.color_map[head_hash]
 
             async for neighbour in neighbours:
@@ -156,7 +175,7 @@ class NodeTraverser:
                 else:
                     print(f"Added edge {node_addr} {neighbour_addr}")
                     self.graph.add_edge(node_addr, neighbour_addr)
-                if neighbour_addr not in self.visited and not self.interrupted:
+                if neighbour_addr not in self.visited:
                     self.loop.create_task(self.traverse_node(neighbour_addr))
         except asyncio.TimeoutError:
             print(f"Connection timed out for node {node_addr}. RPC unreachable.")
@@ -182,6 +201,11 @@ def main() -> None:
         type=int,
     )
     parser.add_argument(
+        "--run_once",
+        help="time until graph refresh",
+        action="store_true",
+    )
+    parser.add_argument(
         "--refresh_interval",
         help="time until graph refresh",
         default=15,
@@ -189,31 +213,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    g = pygraphviz.AGraph(directed=True, strict=True)
-    visited: set[Address] = set()
-    color_map: dict[Hash, Color] = IncrementingDefaultDict(COLORS)
-
     traverser = NodeTraverser(
-        asyncio.get_event_loop(),
-        g,
-        color_map,
-        visited,
         args.refresh_interval,
         args.rpc_port,
         args.timeout,
+        args.run_once,
     )
-    traverser.loop.create_task(traverser.start_traverse(args.endpoint))
-
-    try:
-        traverser.loop.run_forever()
-    except KeyboardInterrupt:
-        print("Caught keyboard interrupt, finalizing graph...")
-        traverser.interrupt()
-        traverser.loop.create_task(traverser.restart_traversal(args.endpoint))
-        while pending := [
-            task for task in asyncio.all_tasks(traverser.loop) if not task.done()
-        ]:
-            traverser.loop.run_until_complete(asyncio.gather(*pending))
-        traverser.loop.run_until_complete(traverser.close())
-    finally:
-        traverser.loop.close()
+    traverser.start(args.endpoint)
