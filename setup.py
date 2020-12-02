@@ -5,7 +5,7 @@ with open("README.md", "r") as readme:
 
 setuptools.setup(
     name="tezos_net_viz",
-    version="0.0.2a",
+    version="0.0.7c",
     author="Simon Zeng",
     author_email="simon.zeng@tqtezos.com",
     description="Tezos blockchain visualization tool",
@@ -20,6 +20,6 @@ setuptools.setup(
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
     ],
-    install_requires=["aiohttp", "pygraphviz"],
+    install_requires=["aiohttp", "pygraphviz", "aiofiles"],
     python_requires=">=3.8",
 )
