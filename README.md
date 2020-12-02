@@ -5,8 +5,8 @@ by querying a given tezos node for its peers, and recursively crawling each node
 its connected to.
 
 ```sh
-usage: tezos_net_viz [-h] [--rpc_port RPC_PORT] [--timeout TIMEOUT]
-                     [--refresh_interval REFRESH_INTERVAL]
+usage: tezos_net_viz [-h] [--rpc-port RPC_PORT] [--timeout TIMEOUT]
+                     [--refresh-interval REFRESH_INTERVAL]
                      endpoint
 
 positional arguments:
@@ -14,9 +14,9 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  --rpc_port RPC_PORT   rpc port of every node to explore
+  --rpc-port RPC_PORT   rpc port of every node to explore
   --timeout TIMEOUT     connection timeout
-  --refresh_interval REFRESH_INTERVAL
+  --refresh-interval REFRESH_INTERVAL
                         time until graph refresh
 ```
 

@@ -226,7 +226,7 @@ def main() -> None:
         type=Address,
     )
     parser.add_argument(
-        "--rpc_port",
+        "--rpc-port",
         help="rpc port of every node to explore",
         default=8732,
         type=int,
@@ -238,12 +238,12 @@ def main() -> None:
         type=int,
     )
     parser.add_argument(
-        "--run_once",
+        "--run-once",
         help="time until graph refresh",
         action="store_true",
     )
     parser.add_argument(
-        "--refresh_interval",
+        "--refresh-interval",
         help="time until graph refresh",
         default=5,
         type=int,
