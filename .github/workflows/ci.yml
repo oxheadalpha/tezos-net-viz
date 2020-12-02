@@ -28,9 +28,6 @@ jobs:
           autoflake . -r --remove-all-unused-imports
           autoflake . -r --remove-all-unused-imports -c
 
-      - name: Sort imports
-        run: isort . --check --diff -rc
-
       - name: black
         run: black . --check
 
