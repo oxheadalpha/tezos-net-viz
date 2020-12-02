@@ -16,10 +16,12 @@ setuptools.setup(
     entry_points={"console_scripts": ["tezos_net_viz=tezos_net_viz:main"]},
     classifiers=[
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "License :: OSI Approved :: BSD License",
         "Operating System :: OS Independent",
     ],
     install_requires=["aiohttp", "pygraphviz", "aiofiles"],
-    python_requires=">=3.8",
+    python_requires=">=3.7",
 )
