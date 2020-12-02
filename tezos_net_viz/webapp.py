@@ -1,10 +1,8 @@
-import aiohttp
-import aiofiles
 import asyncio
-import importlib.resources
+from typing import AsyncIterator, Optional
+
+import aiofiles
 from aiohttp import web
-from typing import Callable, Awaitable, Optional, AsyncIterator
-from . import resources
 
 routes = web.RouteTableDef()
 
@@ -17,6 +15,7 @@ async def sleep_iterator(
         await asyncio.sleep(sleep_time)
         if limit:
             limit -= 1
+
 
 HOME_PAGE = """
 <!DOCTYPE html>
@@ -45,6 +44,7 @@ webSocket.onmessage = function (event) {
 
 </script>
 """
+
 
 @routes.get("/")
 async def home(request: web.Request) -> web.Response:

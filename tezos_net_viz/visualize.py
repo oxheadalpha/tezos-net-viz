@@ -4,13 +4,15 @@
 # Formatted with Black
 
 from __future__ import annotations
+
 import argparse
 import asyncio
 import itertools
+from pathlib import Path
 from typing import (
-    Dict,
     Any,
     AsyncIterator,
+    Dict,
     Iterable,
     Literal,
     NewType,
@@ -19,11 +21,11 @@ from typing import (
     cast,
     get_args,
 )
-from pathlib import Path
 
 import aiohttp
 import pygraphviz
 from aiohttp import web
+
 from . import webapp
 
 Color = Literal["black", "red", "orange", "green", "blue"]
@@ -153,7 +155,7 @@ class NodeTraverser:
         # We can't use the context manager since that doens't survive across tasks.
         # The downside is we don't have a way to close the session, but the program is intended to run forever anyhow.
         if self.session is None:
-            timeout_config = aiohttp.ClientTimeout(total=self.timeout) # type: ignore
+            timeout_config = aiohttp.ClientTimeout(total=self.timeout)  # type: ignore
             self.session = aiohttp.ClientSession(timeout=timeout_config)
 
         self.loop.create_task(self.restart_traversal(starting_addr))
