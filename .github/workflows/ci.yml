@@ -50,7 +50,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install graphviz
+          sudo apt install graphviz libgraphviz-dev pkg-config
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
@@ -80,7 +80,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install graphviz
+          sudo apt install graphviz libgraphviz-dev pkg-config
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
